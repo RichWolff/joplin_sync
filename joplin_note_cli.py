@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Tuple
 from urllib import error, parse, request
+import ssl
 
 
 META_ORDER = [
@@ -49,6 +50,9 @@ class ApiError(RuntimeError):
     pass
 
 
+SSL_CONTEXT = None
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
@@ -65,7 +69,7 @@ def http_json(method: str, url: str, data=None, headers=None):
 
     req = request.Request(url, data=payload, headers=req_headers, method=method)
     try:
-        with request.urlopen(req) as resp:
+        with request.urlopen(req, context=SSL_CONTEXT) as resp:
             body = resp.read()
             if not body:
                 return None
@@ -80,7 +84,7 @@ def http_json(method: str, url: str, data=None, headers=None):
 def http_text(method: str, url: str, headers=None) -> str:
     req = request.Request(url, headers=headers or {}, method=method)
     try:
-        with request.urlopen(req) as resp:
+        with request.urlopen(req, context=SSL_CONTEXT) as resp:
             return resp.read().decode("utf-8")
     except error.HTTPError as e:
         msg = e.read().decode("utf-8", errors="replace")
@@ -109,7 +113,7 @@ def http_put_multipart(url: str, api_auth: str, file_name: str, file_bytes: byte
 
     req = request.Request(url, data=bytes(body), headers=headers, method="PUT")
     try:
-        with request.urlopen(req) as resp:
+        with request.urlopen(req, context=SSL_CONTEXT) as resp:
             raw = resp.read().decode("utf-8")
             return json.loads(raw) if raw else {}
     except error.HTTPError as e:
@@ -320,6 +324,7 @@ def build_parser():
     p.add_argument("--base-url", default=os.getenv("JOPLIN_BASE_URL", "https://notes.home.arpa"))
     p.add_argument("--email", default=os.getenv("JOPLIN_EMAIL"))
     p.add_argument("--password", default=os.getenv("JOPLIN_PASSWORD"))
+    p.add_argument("--ca-cert", default=os.getenv("JOPLIN_CA_CERT"), help="Path to root CA cert PEM/CRT")
 
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -347,11 +352,15 @@ def build_parser():
 
 
 def main():
+    global SSL_CONTEXT
     parser = build_parser()
     args = parser.parse_args()
 
     if not args.email or not args.password:
         parser.error("Provide --email and --password or set JOPLIN_EMAIL/JOPLIN_PASSWORD")
+
+    if args.ca_cert:
+        SSL_CONTEXT = ssl.create_default_context(cafile=args.ca_cert)
 
     try:
         args.func(args)

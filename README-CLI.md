@@ -13,13 +13,17 @@ Set env vars or pass flags:
 - `JOPLIN_BASE_URL` (default: `https://notes.home.arpa`)
 - `JOPLIN_EMAIL`
 - `JOPLIN_PASSWORD`
+- `JOPLIN_CA_CERT` (path to your trusted root CA, e.g. `root_ca.crt`)
 
 Example:
 ```bash
 export JOPLIN_BASE_URL="https://notes.home.arpa"
 export JOPLIN_EMAIL="your-user@example.com"
 export JOPLIN_PASSWORD="your-password"
+export JOPLIN_CA_CERT="$HOME/homelab-certs/root_ca.crt"
 ```
+
+You can also put these in `.env` in this folder. `make` auto-loads `.env`.
 
 ## Pull a note
 ```bash
