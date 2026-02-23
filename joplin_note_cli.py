@@ -11,7 +11,11 @@ from pathlib import Path
 from typing import Dict, Tuple
 from urllib import error, parse, request
 import ssl
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:  # Optional dependency
+    def load_dotenv(*_args, **_kwargs):
+        return False
 
 
 META_ORDER = [
@@ -185,21 +189,21 @@ def serialize_note(title: str, body: str, metadata: Dict[str, str]) -> str:
 
 def parse_markdown_file(path: Path) -> Tuple[Dict[str, str], str]:
     text = path.read_text(encoding="utf-8")
-    if text.startswith("---\n"):
-        end = text.find("\n---\n", 4)
-        if end != -1:
-            front = text[4:end]
-            body = text[end + 5 :]
-            meta = {}
-            for line in front.splitlines():
-                if not line.strip() or line.strip().startswith("#"):
-                    continue
-                key, _, val = line.partition(":")
-                if not _:
-                    continue
-                meta[key.strip()] = val.strip()
-            return meta, body
-    return {}, text
+    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n?", text, flags=re.DOTALL)
+    if not m:
+        return {}, text
+
+    front = m.group(1)
+    body = text[m.end() :]
+    meta = {}
+    for line in front.splitlines():
+        if not line.strip() or line.strip().startswith("#"):
+            continue
+        key, _, val = line.partition(":")
+        if not _:
+            continue
+        meta[key.strip()] = val.strip()
+    return meta, body
 
 
 def write_markdown_file(path: Path, title: str, body: str, note_id: str, parent_id: str):
@@ -257,7 +261,20 @@ def cmd_push(args):
     payload = serialize_note(new_title, body.rstrip("\n"), remote_meta)
     put_url = f"{args.base_url}/api/items/{parse.quote(item_path, safe=':/')}/content"
     http_put_multipart(put_url, session_id, f"{note_id}.md", payload.encode("utf-8"))
-    print(f"Pushed note {note_id}")
+
+    verify_raw = http_text("GET", get_url, headers={"X-API-AUTH": session_id})
+    verify_title, verify_body, _verify_meta = parse_serialized_note(verify_raw)
+    expected_body = body.rstrip("\n")
+    if verify_title != new_title or verify_body != expected_body:
+        raise ApiError(
+            f"Verification failed after push for note {note_id}. "
+            f"Expected title/body update did not round-trip."
+        )
+
+    if new_title == remote_title and expected_body == _remote_body:
+        print(f"Pushed note {note_id} (no content changes detected)")
+    else:
+        print(f"Pushed note {note_id} (content updated)")
 
 
 def cmd_create(args):
