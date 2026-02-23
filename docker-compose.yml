@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: joplin-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /data/main/homelab/joplin/postgres:/var/lib/postgresql/data
+    networks:
+      - joplin-internal
+
+  joplin-server:
+    image: joplin/server:latest
+    container_name: joplin-server
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      APP_PORT: 22300
+      APP_BASE_URL: ${APP_BASE_URL}
+      DB_CLIENT: pg
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - joplin-internal
+      - edge
+
+networks:
+  joplin-internal:
+    name: joplin-internal
+  edge:
+    external: true
