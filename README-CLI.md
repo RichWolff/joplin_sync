@@ -8,6 +8,13 @@ This tool talks to your running Joplin Server API and lets you:
 ## File
 - `joplin_note_cli.py`
 
+## Install
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
 ## Auth
 Set env vars or pass flags:
 - `JOPLIN_BASE_URL` (default: `https://notes.home.arpa`)
@@ -23,7 +30,9 @@ export JOPLIN_PASSWORD="your-password"
 export JOPLIN_CA_CERT="$HOME/homelab-certs/root_ca.crt"
 ```
 
-You can also put these in `.env` in this folder. `make` auto-loads `.env`.
+You can also put these in `.env` in this folder.
+- `joplin_note_cli.py` auto-loads `.env` via `python-dotenv`.
+- `make` also auto-loads `.env`.
 
 ## Pull a note
 ```bash
@@ -35,6 +44,11 @@ python3 joplin_note_cli.py pull --note-id <NOTE_ID_32HEX> --out ./notes/my-note.
 2. Push it back:
 ```bash
 python3 joplin_note_cli.py push --file ./notes/my-note.md
+```
+
+Make shortcut (supports trailing note ID):
+```bash
+make push FILE=./notes/my-note.md ee39ed70ff624e2aade2142a2cf60d4e
 ```
 
 The pulled markdown uses front matter:

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 from urllib import error, parse, request
 import ssl
+from dotenv import load_dotenv
 
 
 META_ORDER = [
@@ -353,6 +354,7 @@ def build_parser():
 
 def main():
     global SSL_CONTEXT
+    load_dotenv()
     parser = build_parser()
     args = parser.parse_args()
 

@@ -8,6 +8,15 @@ include .env
 export
 endif
 
+# Allow: make push FILE=... <NOTE_ID>
+ifneq (,$(filter push,$(MAKECMDGOALS)))
+PUSH_EXTRA_GOALS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+ifneq ($(strip $(PUSH_EXTRA_GOALS)),)
+NOTE_ID ?= $(firstword $(PUSH_EXTRA_GOALS))
+$(eval $(PUSH_EXTRA_GOALS):;@:)
+endif
+endif
+
 .PHONY: help check-env pull push create create-from-file
 
 help:
