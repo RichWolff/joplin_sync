@@ -62,6 +62,16 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+def now_ms_str() -> str:
+    return str(int(datetime.now(timezone.utc).timestamp() * 1000))
+
+
+def next_time_value(existing: str) -> str:
+    if existing is not None and re.fullmatch(r"\d+", str(existing).strip()):
+        return now_ms_str()
+    return utc_now_iso()
+
+
 def http_json(method: str, url: str, data=None, headers=None):
     payload = None
     req_headers = {"Accept": "application/json"}
@@ -252,11 +262,12 @@ def cmd_push(args):
     new_title = front.get("title") or args.title or remote_title
     parent_id = front.get("parent_id") or remote_meta.get("parent_id", "")
 
-    now = utc_now_iso()
+    next_updated = next_time_value(remote_meta.get("updated_time", ""))
+    next_user_updated = next_time_value(remote_meta.get("user_updated_time", ""))
     remote_meta["id"] = note_id
     remote_meta["parent_id"] = parent_id
-    remote_meta["updated_time"] = now
-    remote_meta["user_updated_time"] = now
+    remote_meta["updated_time"] = next_updated
+    remote_meta["user_updated_time"] = next_user_updated
 
     payload = serialize_note(new_title, body.rstrip("\n"), remote_meta)
     put_url = f"{args.base_url}/api/items/{parse.quote(item_path, safe=':/')}/content"
@@ -290,12 +301,13 @@ def cmd_create(args):
     elif args.body:
         body = args.body
 
-    now = utc_now_iso()
+    now_iso = utc_now_iso()
+    now_ms = now_ms_str()
     meta = {
         "id": note_id,
         "parent_id": args.notebook_id,
-        "created_time": now,
-        "updated_time": now,
+        "created_time": now_ms,
+        "updated_time": now_ms,
         "is_conflict": "0",
         "latitude": "0.00000000",
         "longitude": "0.00000000",
@@ -309,8 +321,8 @@ def cmd_create(args):
         "source_application": "net.cozic.joplin-desktop",
         "application_data": "",
         "order": "0",
-        "user_created_time": now,
-        "user_updated_time": now,
+        "user_created_time": now_ms,
+        "user_updated_time": now_ms,
         "encryption_cipher_text": "",
         "encryption_applied": "0",
         "markup_language": "1",
